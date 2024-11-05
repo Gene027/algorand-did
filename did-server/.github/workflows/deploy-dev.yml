@@ -1,0 +1,82 @@
+name: build-deploy
+on:
+  push:
+    branches: ['master']
+jobs:
+  build-nextfi-did-dev:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: Development
+      DEPLOYMENT_SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      GCP_PROJECT_ID: cart-421800
+      GKE_ZONE: europe-west1
+      GCLOUD_VERSION: 413.0.0
+      REPOSITORY_URL: europe-west1-docker.pkg.dev/cart-421800/nextfi-did-dev   
+      DEPLOYMENT_NAME: nextfi-did-dev
+      IMAGE: nextfi-did-dev
+      REPO_NAME: nextfi-did-dev
+  
+    steps:
+      - name: Pre Slack Notification
+        run: |
+            curl -X POST --data-urlencode "payload={\"channel\": \"#engineering\", \"username\": \"@github-action\", \"text\": \"Deployment to  ${ENVIRONMENT}  has began for nextfi-did-dev  \", \"icon_emoji\": \":rocket:\"}" "${DEPLOYMENT_SLACK_WEBHOOK}"
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        id: 'auth'
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Download Secret Files from Secret Manager
+        run: |
+          gcloud secrets versions access latest --secret="nextfi-did-dev" > .env
+
+
+      - name: 'Docker auth'
+        run: |-
+            gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+  
+        
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        run: |
+          docker build -t ${{ env.REPOSITORY_URL }}/$IMAGE:$GITHUB_SHA .
+          docker push ${{ env.REPOSITORY_URL }}/$IMAGE:$GITHUB_SHA
+          echo "::set-output name=image::${{ env.REPOSITORY_URL }}/$IMAGE:$GITHUB_SHA"
+      
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+            service: ${{ env.DEPLOYMENT_NAME }}
+            image: ${{ steps.build-image.outputs.image }}
+            region: europe-west1
+            allow_unauthenticated: true
+        
+    
+      - name: Post Slack Notification
+        env:
+          ENVIRONMENT: Development 
+          DEPLOYMENT_SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+            curl -X POST --data-urlencode "payload={\"channel\": \"#deployment\", \"username\": \"@github-action\", \"text\": \"Deployment to  ${ENVIRONMENT} was successful for nextfi-did-dev   :tada: \", \"icon_emoji\": \":rocket:\"}" "${DEPLOYMENT_SLACK_WEBHOOK}"
+
+      - name: Report Status
+        if: always()
+        uses: ravsamhq/notify-slack-action@v1
+        with:
+          status: ${{ job.status }}
+          notify_when: 'failure'
+          notification_title: '{workflow} has {status_message}'
+          message_format: '{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}>'
+          footer: 'Linked to Repo <{repo_url}|{repo}>'          
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

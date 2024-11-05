@@ -1,0 +1,14 @@
+{
+    "current_profile": "testnet",
+    "profiles": [
+       {
+            "name": "testnet",
+            "node": "https://testnet-api.algonode.cloud",
+            "app_id": 723805989,
+            "address": "ZVLTE5TNNIUV6N2MT5U6U537W2OXRTL5EJK4YFF52Z262NCADRWTVPQE6Y",
+            "mnemonic": "priority north mansion cushion razor track secret boil fever rhythm embrace universe wreck planet enlist spare put drift scan mass piano slab wedding absorb earth",
+            "private_key": "",
+            "access_token": ""
+        }
+    ]
+}

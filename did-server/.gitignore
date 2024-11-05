@@ -1,0 +1,50 @@
+.test/
+
+# Generals
+.DS_Store
+.idea
+.vscode
+*.iml
+
+# Deps
+vendor/**
+
+# Temporary files
+tmp/
+
+# Build releases
+dist
+*.tgz
+!client/ui/local-app/dist
+
+# PKI
+*.crt
+*.csr
+*.cer
+*.pem
+*.key
+!**/testdata/*.cer
+!**/testdata/*.pem
+
+# Secret data
+secret*
+!helm/**/secret.yaml
+.env
+
+# protobuf / RPC
+# *.swagger.json
+
+# Build
+/algoid
+/algoid-*
+
+# Sample config files
+config.yaml
+config-*.yaml
+
+# Code coverage reports
+coverage.*
+
+# Packages
+node_modules
+tmp
